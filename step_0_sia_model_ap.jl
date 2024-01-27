@@ -11,13 +11,13 @@ roughness(x, y, ω, amp) = @. amp * sin(ω * x) * cos(ω * y)
 # SIA fluxes
 function flux(H, S, As, A, npow, dx, dy)
     # surface gradient
-    ∇S = # ...
+    ∇S = @. sqrt(($d_dx(S) / dx)^2 + ($d_dy(S) / dy)^2)
     # diffusivity
-    D = # ...
+    D = @. (A * $inn(H)^(npow + 2) + As * $inn(H)^npow) * ∇S^(npow - 1)
     # flux
-    qx = # ...
-    qy = # ...
-    return # ...
+    qx = @. -D * $d_dx(S) / dx
+    qy = @. -D * $d_dy(S) / dy
+    return @. sqrt(qx^2 + qy^2)
 end
 # physics
 lx, ly = 20.0, 20.0

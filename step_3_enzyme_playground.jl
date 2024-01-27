@@ -4,7 +4,7 @@ f(x, ω, amp) = amp * sin(ω * x)
 # exact derivative
 ∂f_∂x_exact(x, ω, amp) = amp * ω * cos(ω * x)
 # Enzyme derivative
-∂f_∂x_ad(x, ω, amp)    = Enzyme.autodiff(Enzyme.Reverse, f, x, ω, amp)
+∂f_∂x_ad(x, ω, amp) = Enzyme.autodiff(Enzyme.Reverse, f, x, ω, amp)
 # finite differences
 function ∂f_∂x_fd(x, ω, amp)
     dx = x * sqrt(eps())
@@ -45,7 +45,7 @@ function loss(q, q_obs)
     return s
 end
 # "modeled" value
-q     = sin.(x)
+q = sin.(x)
 # "observed" value
 q_obs = 10.0 .* sin.(x)
 # loss

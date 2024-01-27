@@ -11,7 +11,21 @@ function synthetic_slipperiness(B, z_sedi, z_rock, As_sedi, As_rock)
 end
 # SIA fluxes
 function flux!(q, H, S, As, A, npow, dx, dy)
-    # ...
+    for iy in axes(q, 2), ix in axes(q, 1)
+        # finite differences
+        d_dx(A) = 0.5 * (A[ix+2, iy+1] - A[ix, iy+1])
+        d_dy(A) = 0.5 * (A[ix+1, iy+2] - A[ix+1, iy])
+        inn(A)  = A[ix+1, iy+1]
+        # surface gradient
+        ∇S = sqrt((d_dx(S) / dx)^2 + (d_dy(S) / dy)^2)
+        # diffusivity
+        D = (A * inn(H)^(npow + 2) + As[ix, iy] * inn(H)^npow) * ∇S^(npow - 1)
+        # flux
+        qx        = -D * d_dx(S) / dx
+        qy        = -D * d_dy(S) / dy
+        q[ix, iy] = sqrt(qx^2 + qy^2)
+    end
+    return
 end
 # loss function
 function loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
@@ -20,19 +34,19 @@ function loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
 end
 # gradient of loss function
 function grad_loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
-    # ...
+    Enzyme.autodiff(Enzyme.Reverse, loss, q_obs, q, H, S, As, A, npow, dx, dy, wt)
 end
 # regularisation
 function regularise!(As, ΔAs, α, dx, dy)
     cfl  = 1 / 4.1
     # hint: dt = cfl * min(dx, dy)^2 / χ; χ is (arbitrary) diffusion coefficient
     # hint: α is diffusion distance in length units
-    nreg = # ...
+    nreg = ceil(Int, α^2 / cfl / min(dx, dy)^2)
     for _ in 1:nreg
         for iy in axes(ΔAs, 2), ix in axes(ΔAs, 1)
-            d2_dx2(A) = # ...
-            d2_dy2(A) = # ...
-            ΔAs[ix, iy] = # ...
+            d2_dx2(A) = A[ix+2, iy+1] -2.0 * A[ix+1, iy+1] + A[ix, iy+1]
+            d2_dy2(A) = A[ix+1, iy+2] -2.0 * A[ix+1, iy+1] + A[ix+1, iy]
+            ΔAs[ix, iy] = d2_dx2(As) /dx^2 + d2_dy2(As) / dy^2
         end
         @. As[2:end-1, 2:end-1] += cfl * min(dx, dy)^2 * ΔAs
     end
@@ -129,10 +143,10 @@ ngd   = 200
 J_evo = Float64[J0]
 for igd in 1:ngd
     # gradient
-    # ...
+    ∇J!(Ās, As)
     # step size aka learning rate
     γ = 2.0 * inv(maximum(abs.(Ās)))
-    @. As -= # ...
+    @. As -= γ * Ās
     regularise!(As, ΔAs, 1e-3lx, dx, dy)
     # evaluate loss
     push!(J_evo, J(As))

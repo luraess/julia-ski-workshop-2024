@@ -11,7 +11,21 @@ function synthetic_slipperiness(B, z_sedi, z_rock, As_sedi, As_rock)
 end
 # SIA fluxes
 function flux!(q, H, S, As, A, npow, dx, dy)
-    # ...
+    for iy in axes(q, 2), ix in axes(q, 1)
+        # finite differences
+        d_dx(A) = 0.5 * (A[ix+2, iy+1] - A[ix, iy+1])
+        d_dy(A) = 0.5 * (A[ix+1, iy+2] - A[ix+1, iy])
+        inn(A)  = A[ix+1, iy+1]
+        # surface gradient
+        ∇S = sqrt((d_dx(S) / dx)^2 + (d_dy(S) / dy)^2)
+        # diffusivity
+        D = (A * inn(H)^(npow + 2) + As[ix, iy] * inn(H)^npow) * ∇S^(npow - 1)
+        # flux
+        qx        = -D * d_dx(S) / dx
+        qy        = -D * d_dy(S) / dy
+        q[ix, iy] = sqrt(qx^2 + qy^2)
+    end
+    return
 end
 # loss function
 function loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
@@ -20,7 +34,7 @@ function loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
 end
 # gradient of loss function
 function grad_loss(q_obs, q, H, S, As, A, npow, dx, dy, wt)
-    # ...
+    Enzyme.autodiff(Enzyme.Reverse, loss, q_obs, q, H, S, As, A, npow, dx, dy, wt)
 end
 # physics
 lx, ly = 20.0, 20.0
@@ -112,10 +126,10 @@ ngd   = 200
 J_evo = Float64[J0]
 for igd in 1:ngd
     # gradient
-    # ...
+    ∇J!(Ās, As)
     # step size aka learning rate
     γ = 2.0 * inv(maximum(abs.(Ās)))
-    @. As -= # ...
+    @. As -= γ * Ās
     # evaluate loss
     push!(J_evo, J(As))
     # update plots
